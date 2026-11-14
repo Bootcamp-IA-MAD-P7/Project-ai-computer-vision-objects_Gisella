@@ -172,12 +172,51 @@ def load_model(model_path: str) -> YOLO:
     return YOLO(model_path)
 
 
-def run_detection(model: YOLO, frame_bgr: np.ndarray, conf: float):
+def drop_nested_boxes(result, nested_threshold: float = 0.85):
+    """Remove boxes that sit almost entirely inside a higher-confidence box.
+
+    For every pair of boxes, the overlap is measured against the SMALLER
+    box. If at least `nested_threshold` of it lies inside the other box,
+    the lower-confidence one is discarded. Boxes are visited from highest
+    to lowest confidence, so the best detection always survives.
+    """
+    boxes = result.boxes
+    if boxes is None or len(boxes) < 2:
+        return result
+
+    xyxy = boxes.xyxy.cpu().numpy()
+    scores = boxes.conf.cpu().numpy()
+    areas = (xyxy[:, 2] - xyxy[:, 0]) * (xyxy[:, 3] - xyxy[:, 1])
+
+    keep: list[int] = []
+    for i in np.argsort(-scores):
+        is_nested = False
+        for j in keep:
+            inter_w = min(xyxy[i, 2], xyxy[j, 2]) - max(xyxy[i, 0], xyxy[j, 0])
+            inter_h = min(xyxy[i, 3], xyxy[j, 3]) - max(xyxy[i, 1], xyxy[j, 1])
+            inter = max(0.0, inter_w) * max(0.0, inter_h)
+            smaller = min(areas[i], areas[j])
+            if smaller > 0 and inter / smaller >= nested_threshold:
+                is_nested = True
+                break
+        if not is_nested:
+            keep.append(int(i))
+
+    if len(keep) == len(scores):
+        return result
+    return result[sorted(keep)]
+
+
+def run_detection(
+    model: YOLO, frame_bgr: np.ndarray, conf: float, drop_nested: bool = True
+):
     """Run the model on one BGR frame.
 
     Returns the annotated frame (BGR) and a list of (class_name, confidence).
     """
     result = model.predict(frame_bgr, conf=conf, verbose=False)[0]
+    if drop_nested:
+        result = drop_nested_boxes(result)
     annotated = result.plot()  # draws boxes and labels, returns BGR
     detections = [
         (result.names[int(box.cls)], float(box.conf)) for box in result.boxes
@@ -239,14 +278,16 @@ def render_board(stats: dict) -> str:
 # --------------------------------------------------------------------------
 # File processing
 # --------------------------------------------------------------------------
-def process_image(model: YOLO, uploaded, conf: float) -> None:
+def process_image(
+    model: YOLO, uploaded, conf: float, drop_nested: bool = True
+) -> None:
     data = np.frombuffer(uploaded.getvalue(), dtype=np.uint8)
     frame = cv2.imdecode(data, cv2.IMREAD_COLOR)
     if frame is None:
         st.error("No se pudo leer la imagen.")
         return
 
-    annotated, detections = run_detection(model, frame, conf)
+    annotated, detections = run_detection(model, frame, conf, drop_nested)
     stats: dict = {}
     update_stats(stats, detections)
 
@@ -261,7 +302,9 @@ def process_image(model: YOLO, uploaded, conf: float) -> None:
         st.markdown(render_board(stats), unsafe_allow_html=True)
 
 
-def process_video(model: YOLO, uploaded, conf: float, stride: int) -> None:
+def process_video(
+    model: YOLO, uploaded, conf: float, stride: int, drop_nested: bool = True
+) -> None:
     suffix = Path(uploaded.name).suffix or ".mp4"
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
     tmp.write(uploaded.getvalue())
@@ -292,7 +335,7 @@ def process_video(model: YOLO, uploaded, conf: float, stride: int) -> None:
             if not ok:
                 break
 
-            annotated, detections = run_detection(model, frame, conf)
+            annotated, detections = run_detection(model, frame, conf, drop_nested)
             update_stats(stats, detections)
             processed += 1
             frame_slot.image(to_display(annotated))
@@ -354,6 +397,14 @@ def main() -> None:
             2,
             help="Un valor mayor acelera el analisis en CPU.",
         )
+        drop_nested = st.checkbox(
+            "Eliminar recuadros anidados",
+            value=True,
+            help=(
+                "Si un recuadro queda casi por completo dentro de otro, "
+                "se conserva el de mayor confianza."
+            ),
+        )
 
     if not Path(model_path).exists():
         st.error(f"No se encuentra el modelo en: {model_path}")
@@ -383,9 +434,9 @@ def main() -> None:
         )
         extension = Path(uploaded.name).suffix.lower().lstrip(".")
         if extension in VIDEO_TYPES:
-            process_video(model, uploaded, conf, stride)
+            process_video(model, uploaded, conf, stride, drop_nested)
         else:
-            process_image(model, uploaded, conf)
+            process_image(model, uploaded, conf, drop_nested)
 
 
 if __name__ == "__main__":
