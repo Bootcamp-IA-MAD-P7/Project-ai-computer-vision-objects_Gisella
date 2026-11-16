@@ -69,8 +69,8 @@ Además de las métricas de test, se probó el modelo con fotos y vídeos ajenos
 | Fotos de aviones (Lufthansa, Iberia, Ryanair, KLM) | `airplane` con confianzas de 0,80, 0,63, 0,86 y 0,44 |
 | Foto de un helicóptero Black Hawk | `helicopter` con 0,72; el recuadro deja fuera la punta de las palas |
 | Vídeo de un helicóptero | `helicopter` en 467 detecciones (confianza media del 83 %), con etiquetas esporádicas de `airplane` (38 %) y `bird` (31 %) |
-| Fotos claras de colibríes y de un loro | Detectados, con el recuadro cubriendo todo el ave |
-| Foto de un `drone` (0,74) | Detectado, con el recuadro cubriendo todo el ave | 
+| Fotos claras de colibríes | Detectados, con el recuadro cubriendo todo el ave |
+| Imagen artística de un colibrí (generada por IA) | Sin detecciones |
 | Vídeo de un colibrí en primer plano | La etiqueta del recuadro alterna entre `bird` y `airplane` y aparece un segundo recuadro |
 | Vídeo de un dron en primer plano | Etiquetado como `airplane` (65 detecciones), `helicopter` (20) y `bird` (11); nunca como `drone` |
 
@@ -137,7 +137,7 @@ streamlit run app.py
 - Se entrenó con la variante más ligera de YOLO11 y con un número reducido de épocas por el límite de GPU de Colab. La métrica seguía mejorando al terminar, así que más épocas o un modelo mayor (YOLO11s o YOLO11m) mejorarían los resultados.
 - El mAP50-95 (0,627) es bastante menor que el mAP50 (0,949): el modelo encuentra los objetos, pero las cajas no siempre se ajustan con la máxima precisión.
 - En las pruebas se observó al menos un helicóptero grande sin detectar.
-- Las imágenes del dataset proceden de un número limitado de escenarios. Con material propio el rendimiento fue peor en imágenes artísticas o con mucho fondo vegetal, donde el modelo puede no detectar el ave o confundir el fondo con un dron.
+- Las imágenes del dataset proceden de un número limitado de escenarios. Con material propio el rendimiento fue peor en una imagen artística de un colibrí (generada por IA), donde el modelo no detectó el ave.
 - En vídeos con el objeto en primer plano (colibrí y dron) la etiqueta alterna entre `bird` y `airplane`, y el dron no llega a detectarse como `drone`.
 - En el vídeo del helicóptero aparecen etiquetas esporádicas de baja confianza (`airplane` y `bird`).
 - Hipótesis sin comprobar: el modelo vio pocos objetos grandes y cercanos de estas clases durante el entrenamiento.
