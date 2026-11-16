@@ -69,7 +69,7 @@ Además de las métricas de test, se probó el modelo con fotos y vídeos ajenos
 | Fotos de aviones (Lufthansa, Iberia, Ryanair, KLM) | `airplane` con confianzas de 0,80, 0,63, 0,86 y 0,44 |
 | Foto de un helicóptero Black Hawk | `helicopter` con 0,72; el recuadro deja fuera la punta de las palas |
 | Vídeo de un helicóptero | `helicopter` en 467 detecciones (confianza media del 83 %), con etiquetas esporádicas de `airplane` (38 %) y `bird` (31 %) |
-| Fotos claras de colibríes y de un loro | Detectados, con el recuadro cubriendo todo el ave |
+| Fotos claras de colibríes | Detectados, con el recuadro cubriendo todo el ave |
 | Imagen artística de un colibrí (generada por IA) | Sin detecciones |
 | Vídeo de un colibrí en primer plano | La etiqueta del recuadro alterna entre `bird` y `airplane` y aparece un segundo recuadro |
 | Vídeo de un dron en primer plano | Etiquetado como `airplane` (65 detecciones), `helicopter` (20) y `bird` (11); nunca como `drone` |
