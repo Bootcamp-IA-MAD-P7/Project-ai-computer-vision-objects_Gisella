@@ -18,4 +18,4 @@ RUN pip install --no-cache-dir torch torchvision --index-url https://download.py
 COPY src/ src/
 COPY models/ models/
 
-ENTRYPOINT ["python", "src/predict.py"]
+ENTRYPOINT ["python", "-m", "src.predict"]
